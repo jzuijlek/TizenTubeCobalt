@@ -641,6 +641,7 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
 
   @Override
   protected void onPause() {
+    setPreferredDisplayMode(0);
     mPhysicalBackKeyPressed = false;
     if (useStarboardLifeCycle()) {
       AppEventBridge.handleBlurEvent(System.nanoTime() / 1000L);
@@ -652,6 +653,7 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
 
   @Override
   protected void onStop() {
+    setPreferredDisplayMode(0);
     long stopTimestamp = System.nanoTime() / 1000L;
     if (isNvidiaShield()) {
       unregisterDisplayListener();
@@ -1099,6 +1101,37 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
             .unregisterOnBackInvokedCallback((OnBackInvokedCallback) callback);
       }
     }
+  }
+
+  /**
+   * Sets {@code preferredDisplayModeId} on this window. {@code 0} clears it so Fire OS can return
+   * to its rest mode. The write is skipped when that id is already set.
+   */
+  public void setPreferredDisplayMode(int modeId) {
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      applyPreferredDisplayMode(modeId);
+      return;
+    }
+    runOnUiThread(
+        new Runnable() {
+          @Override
+          public void run() {
+            applyPreferredDisplayMode(modeId);
+          }
+        });
+  }
+
+  private void applyPreferredDisplayMode(int modeId) {
+    if (isDestroyed() || getWindow() == null) {
+      return;
+    }
+    WindowManager.LayoutParams params = getWindow().getAttributes();
+    if (params.preferredDisplayModeId == modeId) {
+      return;
+    }
+    params.preferredDisplayModeId = modeId;
+    getWindow().setAttributes(params);
+    Log.i(TAG, "preferredDisplayModeId set to %d", modeId);
   }
 
   public void setFrameRate(float frameRate, int strategy) {

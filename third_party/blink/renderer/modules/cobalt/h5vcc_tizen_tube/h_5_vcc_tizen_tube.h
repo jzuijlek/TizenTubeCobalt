@@ -57,6 +57,7 @@ class MODULES_EXPORT H5vccTizenTube final
                              ExceptionState& exception_state);
 
   void SetFrameRate(float frame_rate);
+  void SetDisplayMode(int width, int height, float frame_rate, int hdr_type);
   void EnterPIP();
   bool SetUserAgent(ScriptState* script_state,
                     const WTF::String& user_agent,

@@ -497,6 +497,16 @@ void StarboardBridge::SetFrameRate(JNIEnv* env, float frame_rate) const {
   Java_BaseStarboardBridge_setFrameRate(env, j_starboard_bridge_, frame_rate);
 }
 
+void StarboardBridge::SetDisplayMode(JNIEnv* env,
+                                      int width,
+                                      int height,
+                                      float frame_rate,
+                                      int hdr_type) const {
+  SB_CHECK(env);
+  Java_BaseStarboardBridge_setDisplayMode(
+      env, j_starboard_bridge_, width, height, frame_rate, hdr_type);
+}
+
 void StarboardBridge::EnterPIP(JNIEnv* env) const {
   SB_CHECK(env);
   Java_BaseStarboardBridge_enterPIP(env, j_starboard_bridge_);

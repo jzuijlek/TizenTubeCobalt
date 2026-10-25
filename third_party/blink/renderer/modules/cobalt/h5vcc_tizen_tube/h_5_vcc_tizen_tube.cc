@@ -96,6 +96,15 @@ void H5vccTizenTube::SetFrameRate(float frame_rate) {
 #endif // BUILDFLAG(IS_ANDROID)
 }
 
+void H5vccTizenTube::SetDisplayMode(int width, int height, float frame_rate,
+                                    int hdr_type) {
+#if BUILDFLAG(IS_ANDROID)
+  auto* env = base::android::AttachCurrentThread();
+  starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
+  bridge->SetDisplayMode(env, width, height, frame_rate, hdr_type);
+#endif // BUILDFLAG(IS_ANDROID)
+}
+
 void H5vccTizenTube::EnterPIP() {
   #if BUILDFLAG(IS_ANDROID)
     auto * env = base::android::AttachCurrentThread();

@@ -39,12 +39,14 @@ import android.view.Surface;
 import android.view.Display;
 import android.view.InputDevice;
 import android.view.Surface;
+import android.view.WindowManager;
 import android.view.accessibility.CaptioningManager;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import dev.cobalt.media.AudioOutputManager;
 import dev.cobalt.media.VideoSurfaceView;
+import dev.cobalt.util.DisplayModeMatcher;
 import dev.cobalt.util.DisplayUtil;
 import dev.cobalt.util.Holder;
 import dev.cobalt.util.Log;
@@ -1149,6 +1151,107 @@ public class BaseStarboardBridge {
         ((CobaltActivity) activity).setFrameRate(frameRate, strategy);
       }
     }
+  }
+
+  /**
+   * Picks a display mode for the video and sets {@code preferredDisplayModeId}. A zero width and
+   * height clears the preference. This does not call {@link #setFrameRate}.
+   */
+  @CalledByNative
+  protected void setDisplayMode(int width, int height, float frameRate, int hdrType) {
+    Activity activity = mActivityHolder.get();
+    if (!(activity instanceof CobaltActivity)) {
+      return;
+    }
+    final CobaltActivity cobaltActivity = (CobaltActivity) activity;
+    if (width == 0 && height == 0) {
+      Log.i(TAG, "SetDisplayMode restore id=0");
+      cobaltActivity.setPreferredDisplayMode(0);
+      return;
+    }
+
+    activity.runOnUiThread(
+        () -> {
+          if (activity.isDestroyed() || activity.getWindow() == null) {
+            return;
+          }
+          Display display = activity.getWindowManager().getDefaultDisplay();
+          if (display == null) {
+            return;
+          }
+          WindowManager.LayoutParams params = activity.getWindow().getAttributes();
+          int currentModeId = params.preferredDisplayModeId;
+          Display.Mode activeMode = display.getMode();
+          if (currentModeId == 0 && activeMode != null) {
+            currentModeId = activeMode.getModeId();
+          }
+
+          Display.Mode[] rawModes = display.getSupportedModes();
+          List<DisplayModeMatcher.Mode> modes = new ArrayList<>();
+          if (rawModes != null) {
+            for (Display.Mode mode : rawModes) {
+              modes.add(
+                  new DisplayModeMatcher.Mode(
+                      mode.getModeId(),
+                      mode.getPhysicalWidth(),
+                      mode.getPhysicalHeight(),
+                      mode.getRefreshRate(),
+                      hdrTypesForMode(mode)));
+            }
+          }
+
+          DisplayModeMatcher.Selection selection =
+              DisplayModeMatcher.select(modes, width, height, frameRate, hdrType, currentModeId);
+          if (selection.modeId == 0) {
+            Log.i(
+                TAG,
+                "SetDisplayMode found no mode for %dx%d @ %f hdr=%d",
+                width,
+                height,
+                frameRate,
+                hdrType);
+            return;
+          }
+          DisplayModeMatcher.Mode chosen = null;
+          for (DisplayModeMatcher.Mode mode : modes) {
+            if (mode.id == selection.modeId) {
+              chosen = mode;
+              break;
+            }
+          }
+          if (chosen == null) {
+            return;
+          }
+          if (selection.sizeMissesHdr) {
+            Log.w(
+                TAG,
+                "SetDisplayMode size %dx%d does not advertise HDR type %d; keeping that size",
+                chosen.width,
+                chosen.height,
+                hdrType);
+          }
+          Log.i(
+              TAG,
+              "SetDisplayMode id=%d size=%dx%d rate=%f hdr=%d",
+              chosen.id,
+              chosen.width,
+              chosen.height,
+              chosen.refreshRate,
+              hdrType);
+          cobaltActivity.setPreferredDisplayMode(chosen.id);
+        });
+  }
+
+  @RequiresApi(34)
+  private static int[] hdrTypesForModeApi34(Display.Mode mode) {
+    return mode.getSupportedHdrTypes();
+  }
+
+  private static int[] hdrTypesForMode(Display.Mode mode) {
+    if (Build.VERSION.SDK_INT < 34) {
+      return null;
+    }
+    return hdrTypesForModeApi34(mode);
   }
 
   @CalledByNative

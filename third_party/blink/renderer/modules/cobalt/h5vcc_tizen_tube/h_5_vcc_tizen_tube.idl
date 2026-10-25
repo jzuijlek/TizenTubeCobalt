@@ -24,6 +24,7 @@ interface H5vccTizenTube {
   [CallWith=ScriptState, RaisesException]
   DOMString GetArchitecture();
   void SetFrameRate(float frame_rate);
+  void SetDisplayMode(long width, long height, float frame_rate, long hdr_type);
   void EnterPIP();
   [CallWith=ScriptState, RaisesException]
   boolean SetUserAgent(DOMString user_agent);

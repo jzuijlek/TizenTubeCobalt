@@ -115,6 +115,11 @@ class StarboardBridge {
   std::string GetArchitecture(JNIEnv* env) const;
   std::string GetBrandAndModel(JNIEnv* env) const;
   void SetFrameRate(JNIEnv* env, float frame_rate) const;
+  void SetDisplayMode(JNIEnv* env,
+                      int width,
+                      int height,
+                      float frame_rate,
+                      int hdr_type) const;
   void EnterPIP(JNIEnv* env) const;
   bool HasSystemFeature(JNIEnv* env, const char* feature_name) const;
   void ShowAlertDialog(JNIEnv* env, const char* title, const char* message) const;
